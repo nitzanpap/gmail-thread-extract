@@ -1,0 +1,43 @@
+{
+  "name": "gmail-thread-extractor",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Extract a Gmail conversation as clean Markdown",
+  "author": "Nitzan Papini",
+  "private": true,
+  "scripts": {
+    "dev": "wxt",
+    "dev:chrome": "wxt -b chrome",
+    "dev:firefox": "wxt -b firefox --mv2",
+    "build": "wxt build",
+    "build:chrome": "wxt build -b chrome",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:chrome": "wxt zip -b chrome",
+    "zip:firefox": "wxt zip -b firefox",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "code:check": "biome check . && bun run typecheck",
+    "code:fix": "biome check --write .",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.11",
+    "@types/chrome": "^0.0.287",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0",
+    "wxt": "^0.20.6"
+  },
+  "keywords": [
+    "chrome-extension",
+    "firefox-addon",
+    "gmail",
+    "markdown",
+    "wxt",
+    "typescript"
+  ]
+}
