@@ -1,5 +1,6 @@
 import type { Message } from "../types"
 import { cleanBody, cleanText, improveReadableSpacing } from "./clean"
+import { extractViaPrintView } from "./printView"
 
 /**
  * DOM scraping of the open Gmail conversation into typed Message objects.
@@ -195,8 +196,18 @@ export async function expandThread(): Promise<void> {
   await delay(200) // brief settle for the last body to paint
 }
 
-/** Expand the thread, then scrape its subject and every message. */
+/**
+ * Extract the open thread. Prefers Gmail's print view (complete, pre-expanded,
+ * stable selectors); falls back to expanding and scraping the live DOM if the
+ * print fetch/parse yields nothing.
+ */
 export async function extractThread(): Promise<{ subject: string; messages: Message[] }> {
+  const viaPrint = await extractViaPrintView()
+  if (viaPrint) {
+    return viaPrint
+  }
+
+  debug("stage=extractThread print view unavailable, falling back to live DOM")
   await expandThread()
   return { subject: extractSubject(), messages: extractMessages() }
 }

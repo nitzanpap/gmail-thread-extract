@@ -9,8 +9,9 @@ You can trigger extraction two ways:
 - the **floating Extract button** on the thread page, or
 - the **toolbar icon popup** (Extract current thread).
 
-Collapsed and super-collapsed messages are **expanded automatically** before scraping, so the whole
-thread is captured — not just the message that happens to be open.
+The whole thread is captured — not just the open message. The primary path fetches Gmail's **print
+view** (`?view=pt`), a single static document containing every message already expanded, with stable
+semantic markup. If that ever fails, it **falls back** to expanding and scraping the live thread DOM.
 
 The popup also has one setting: **Show floating button in Gmail**, to hide the on-page button if you
 prefer to extract only from the toolbar.
@@ -49,12 +50,17 @@ bun run test         # Vitest (Markdown serializer)
 
 Open a Gmail conversation and click the floating **Extract** button.
 
-## Note
+## How extraction works
 
-Gmail's DOM class names (`.adn`, `.a3s`, `.gD`, `.g3`, `.hP`, …) are obfuscated and change over
-time. If extraction stops finding messages, the selectors in [`utils/extract.ts`](utils/extract.ts)
-likely need updating (flip the `DEBUG` flag there to trace which stage returns nothing).
+1. **Primary — print view** ([`utils/printView.ts`](utils/printView.ts)): a same-origin `fetch` of
+   `?view=pt&search=all&th=<legacyThreadId>` returns the full thread as one static HTML document,
+   pre-expanded, with stable classes (`.message`, `.recipient`). The legacy thread id comes from the
+   `data-legacy-message-id` attribute on the open message. No extra permissions, no new tab.
+2. **Fallback — live DOM** ([`utils/extract.ts`](utils/extract.ts)): if the print fetch/parse yields
+   nothing (logged out, or Gmail changed the print view), it expands collapsed messages and scrapes
+   the live thread using Gmail's obfuscated classes (`.adn`, `.a3s`, `.gD`, …).
 
-Auto-expand finds Gmail's "Expand all" button by its `aria-label`, which is **English-only** by
-default. If your Gmail UI is in another language, add a pattern to `EXPAND_ALL_LABELS` in the same
-file. If the button can't be found, only the already-open messages are extracted.
+Two fallback-only caveats (the print path avoids both): Gmail's obfuscated class names change over
+time and may need updating in `utils/extract.ts` (flip the `DEBUG` flag to trace which stage returns
+nothing); and auto-expand matches the "Expand all" button by its **English** `aria-label` — for
+other UI languages add a pattern to `EXPAND_ALL_LABELS`.
