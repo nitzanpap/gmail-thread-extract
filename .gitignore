@@ -5,3 +5,4 @@ node_modules/
 *.xpi
 web-ext-artifacts/
 stats.html
+.DS_Store
