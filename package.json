@@ -1,5 +1,5 @@
 {
-  "name": "gmail-thread-extractor",
+  "name": "gmail-thread-extract",
   "version": "0.1.0",
   "type": "module",
   "description": "Extract a Gmail conversation as clean Markdown",
