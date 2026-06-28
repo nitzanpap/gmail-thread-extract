@@ -139,3 +139,64 @@ export function extractMessages(): Message[] {
 export function isThreadOpen(): boolean {
   return Boolean(document.querySelector("h2.hP")) && findMessageNodes().length > 0
 }
+
+/** Selectors that mark a still-collapsed message or super-collapsed bundle. */
+const COLLAPSED_SELECTOR = ".kv, .kQ, .adv"
+
+/**
+ * aria-label of Gmail's "Expand all" toolbar button. Locale-dependent — add
+ * patterns for your Gmail UI language if auto-expand stops working.
+ * ponytail: matched by label text; a single click expands every collapsed
+ * message and the super-collapsed bundle (verified). Messages that can't be
+ * expanded are simply skipped and the message count reflects that.
+ */
+const EXPAND_ALL_LABELS: ReadonlyArray<RegExp> = [/expand all/i]
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function findExpandAllButton(): HTMLElement | null {
+  for (const button of Array.from(document.querySelectorAll<HTMLElement>("button[aria-label]"))) {
+    const label = button.getAttribute("aria-label") || ""
+    if (EXPAND_ALL_LABELS.some(re => re.test(label))) {
+      return button
+    }
+  }
+  return null
+}
+
+/**
+ * Expand all collapsed messages so their bodies render into the DOM. Gmail
+ * lazy-renders collapsed messages, so without this only the open message is
+ * scraped. No-op when nothing is collapsed or the control can't be found.
+ */
+export async function expandThread(): Promise<void> {
+  if (!document.querySelector(COLLAPSED_SELECTOR)) {
+    return
+  }
+
+  const button = findExpandAllButton()
+  if (!button) {
+    debug("stage=expandThread expand-all button not found (locale?)")
+    return
+  }
+
+  button.click()
+
+  // Bodies render asynchronously; wait until no collapsed markers remain.
+  const deadline = Date.now() + 3000
+  while (Date.now() < deadline) {
+    await delay(200)
+    if (!document.querySelector(COLLAPSED_SELECTOR)) {
+      break
+    }
+  }
+  await delay(200) // brief settle for the last body to paint
+}
+
+/** Expand the thread, then scrape its subject and every message. */
+export async function extractThread(): Promise<{ subject: string; messages: Message[] }> {
+  await expandThread()
+  return { subject: extractSubject(), messages: extractMessages() }
+}

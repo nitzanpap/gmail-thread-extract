@@ -1,13 +1,36 @@
+import { browser } from "wxt/browser"
 import { downloadMarkdown, toast } from "../utils/download"
-import { extractMessages, extractSubject, isThreadOpen } from "../utils/extract"
+import { extractThread, isThreadOpen } from "../utils/extract"
 import { safeFilename, toMarkdown } from "../utils/markdown"
+import { getSettings } from "../utils/settings"
 
 const BUTTON_ID = "gte-extract-btn"
+
+let showFloatingButton = true
+let extracting = false
 
 export default defineContentScript({
   matches: ["https://mail.google.com/*"],
   main() {
-    const sync = () => syncButton()
+    getSettings().then(s => {
+      showFloatingButton = s.showFloatingButton
+      syncButton()
+    })
+
+    // Live-toggle the floating button when the popup changes the setting.
+    browser.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes.showFloatingButton) {
+        showFloatingButton = changes.showFloatingButton.newValue !== false
+        syncButton()
+      }
+    })
+
+    // Extraction can also be triggered from the popup.
+    browser.runtime.onMessage.addListener(message => {
+      if (message?.action === "extract") {
+        runExtraction()
+      }
+    })
 
     // Gmail is a SPA — the DOM changes without page loads. Re-sync the button on
     // any mutation, debounced, plus a slow interval as a belt-and-braces fallback.
@@ -19,19 +42,19 @@ export default defineContentScript({
       scheduled = true
       requestAnimationFrame(() => {
         scheduled = false
-        sync()
+        syncButton()
       })
     })
     observer.observe(document.body, { childList: true, subtree: true })
-    setInterval(sync, 2000)
-    sync()
+    setInterval(syncButton, 2000)
+    syncButton()
   }
 })
 
 function syncButton(): void {
   try {
     const existing = document.getElementById(BUTTON_ID)
-    if (isThreadOpen()) {
+    if (showFloatingButton && isThreadOpen()) {
       if (!existing) {
         document.body.appendChild(createButton())
       }
@@ -65,14 +88,17 @@ function createButton(): HTMLButtonElement {
       "box-shadow:0 2px 8px rgba(0,0,0,0.25)"
     ].join(";")
   )
-  button.addEventListener("click", onExtractClick)
+  button.addEventListener("click", runExtraction)
   return button
 }
 
-function onExtractClick(): void {
+async function runExtraction(): Promise<void> {
+  if (extracting) {
+    return
+  }
+  extracting = true
   try {
-    const subject = extractSubject()
-    const messages = extractMessages()
+    const { subject, messages } = await extractThread()
 
     if (messages.length === 0) {
       toast("Couldn't find any messages — Gmail's layout may have changed.")
@@ -82,14 +108,15 @@ function onExtractClick(): void {
     const markdown = toMarkdown(subject, messages, new Date().toISOString())
     downloadMarkdown(`${safeFilename(subject)}.md`, markdown)
 
-    const ok = `Extracted ${messages.length} message(s).\nMarkdown copied & downloaded.`
-    const copyFailed = `Extracted ${messages.length} message(s).\nDownloaded — clipboard copy failed.`
-
-    navigator.clipboard
-      ?.writeText(markdown)
-      .then(() => toast(ok))
-      .catch(() => toast(copyFailed))
+    try {
+      await navigator.clipboard.writeText(markdown)
+      toast(`Extracted ${messages.length} message(s).\nMarkdown copied & downloaded.`)
+    } catch {
+      toast(`Extracted ${messages.length} message(s).\nDownloaded — clipboard copy failed.`)
+    }
   } catch {
     toast("Extraction failed — Gmail's layout may have changed.")
+  } finally {
+    extracting = false
   }
 }
