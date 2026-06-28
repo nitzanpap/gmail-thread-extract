@@ -21,8 +21,7 @@ function debug(...args: unknown[]): void {
 }
 
 function getText(el: Element | null | undefined): string {
-  const node = el as HTMLElement | null | undefined
-  return cleanText(node?.innerText || el?.textContent || "")
+  return cleanText((el as HTMLElement | null)?.innerText || el?.textContent || "")
 }
 
 function getAttr(el: Element | null | undefined, attr: string): string {

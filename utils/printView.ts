@@ -1,5 +1,5 @@
 import type { Message } from "../types"
-import { cleanBody } from "./clean"
+import { cleanBody, cleanText } from "./clean"
 
 /**
  * Primary extraction path: fetch Gmail's print view (`?view=pt`) and parse it.
@@ -72,7 +72,7 @@ function parseMessage(block: HTMLTableElement): Message | null {
   const senderName = headerCell?.querySelector("b")?.textContent?.trim() || ""
   const senderEmail = (headerCell?.textContent?.match(/[\w.+-]+@[\w.-]+\.[\w.-]+/) || [])[0] || ""
   const date = rows[0].cells[1]?.textContent?.trim() || ""
-  const toText = block.querySelector(".recipient")?.textContent?.replace(/\s+/g, " ").trim() || ""
+  const toText = cleanText(block.querySelector(".recipient")?.textContent || "")
 
   // Body lives in the first nested table; drop signature/quote noise first.
   const bodyEl = block.querySelector("table")
