@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy – Gmail Thread Extractor</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 1rem;
+        line-height: 1.6;
+      }
+      h1 {
+        color: #333;
+      }
+      h2 {
+        color: #333;
+        margin-top: 2rem;
+      }
+      p,
+      li {
+        margin-bottom: 0.5rem;
+      }
+      code {
+        background: #f1f3f4;
+        padding: 0 0.25rem;
+        border-radius: 3px;
+      }
+      .updated {
+        color: #5f6368;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Privacy Policy for Gmail Thread Extractor</h1>
+    <p class="updated">Last updated: June 29, 2026</p>
+
+    <p>
+      Gmail Thread Extractor does <strong>not</strong> collect, store, or transmit any personal data.
+      All operations performed by the extension occur entirely within your browser and do not involve
+      any external servers.
+    </p>
+
+    <p>
+      We do <strong>not</strong> use any tracking scripts, analytics, cookies, or external logging
+      mechanisms, and we do <strong>not</strong> share any data with third parties.
+    </p>
+
+    <h2>What the extension accesses</h2>
+    <p>
+      The extension reads a Gmail conversation <strong>only</strong> when you explicitly click the
+      “Extract” button. It converts the open thread into Markdown, copies that Markdown to your
+      clipboard, and downloads it as a <code>.md</code> file to your own device. The extracted content
+      never leaves your browser and is never sent to us or anyone else.
+    </p>
+
+    <h2>Permissions</h2>
+    <p>The extension requests the minimum permissions needed to function, used strictly locally:</p>
+    <ul>
+      <li>
+        <strong>Access to <code>mail.google.com</code></strong> — to read the conversation you choose
+        to extract. The extension runs on no other website.
+      </li>
+      <li><strong><code>clipboardWrite</code></strong> — to copy the generated Markdown to your clipboard.</li>
+      <li>
+        <strong><code>storage</code></strong> — to remember a single preference (whether the on-page
+        Extract button is shown).
+      </li>
+      <li>
+        <strong><code>activeTab</code></strong> — so the toolbar popup can trigger extraction in the
+        Gmail tab you are currently viewing.
+      </li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>
+      Source code and issues:
+      <a href="https://github.com/nitzanpap/gmail-thread-extract"
+        >github.com/nitzanpap/gmail-thread-extract</a
+      >.
+    </p>
+  </body>
+</html>
