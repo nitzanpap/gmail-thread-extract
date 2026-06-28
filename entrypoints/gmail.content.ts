@@ -29,6 +29,9 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener(message => {
       if (message?.action === "extract") {
         runExtraction()
+      } else if (message?.action === "setFloatingButton") {
+        showFloatingButton = message.value !== false
+        syncButton()
       }
     })
 

@@ -10,8 +10,21 @@ async function init(): Promise<void> {
 
   const settings = await getSettings()
   toggle.checked = settings.showFloatingButton
-  toggle.addEventListener("change", () => {
-    setShowFloatingButton(toggle.checked)
+  toggle.addEventListener("change", async () => {
+    await setShowFloatingButton(toggle.checked)
+    // Nudge the active Gmail tab to update now, without waiting on a storage
+    // event (and so it works even if the tab's content script missed it).
+    try {
+      const [active] = await browser.tabs.query({ active: true, currentWindow: true })
+      if (active?.id != null) {
+        await browser.tabs.sendMessage(active.id, {
+          action: "setFloatingButton",
+          value: toggle.checked
+        })
+      }
+    } catch {
+      // Active tab has no Gmail content script — storage.onChanged covers it.
+    }
   })
 
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
