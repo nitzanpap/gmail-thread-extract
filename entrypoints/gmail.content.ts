@@ -1,7 +1,8 @@
 import { browser } from "wxt/browser"
-import { downloadMarkdown, toast } from "../utils/download"
+import { downloadFile, toast } from "../utils/download"
 import { extractThread, isThreadOpen } from "../utils/extract"
-import { safeFilename, toMarkdown } from "../utils/markdown"
+import { safeFilename } from "../utils/markdown"
+import { serialize } from "../utils/serialize"
 import { getSettings } from "../utils/settings"
 
 const BUTTON_ID = "gte-extract-btn"
@@ -25,11 +26,15 @@ export default defineContentScript({
       }
     })
 
-    // Extraction can also be triggered from the popup.
-    browser.runtime.onMessage.addListener(message => {
-      if (message?.action === "extract") {
-        runExtraction()
-      } else if (message?.action === "setFloatingButton") {
+    // Messages from the popup.
+    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message?.action === "extractData") {
+        // Async response: `return true` keeps the message channel open until
+        // sendResponse fires (Chrome's raw runtime semantics, which WXT uses).
+        extractThread().then(sendResponse, () => sendResponse(null))
+        return true
+      }
+      if (message?.action === "setFloatingButton") {
         showFloatingButton = message.value !== false
         syncButton()
       }
@@ -101,21 +106,32 @@ async function runExtraction(): Promise<void> {
   }
   extracting = true
   try {
-    const { subject, messages } = await extractThread()
+    const thread = await extractThread()
 
-    if (messages.length === 0) {
+    if (thread.messages.length === 0) {
       toast("Couldn't find any messages — Gmail's layout may have changed.")
       return
     }
 
-    const markdown = toMarkdown(subject, messages, new Date().toISOString())
-    downloadMarkdown(`${safeFilename(subject)}.md`, markdown)
+    const settings = await getSettings()
+    const { content, ext } = serialize(
+      thread,
+      {
+        format: settings.format,
+        count: 0,
+        includeAttachments: settings.includeAttachments,
+        boilerplate: settings.boilerplate
+      },
+      new Date().toISOString()
+    )
+    downloadFile(`${safeFilename(thread.subject)}.${ext}`, content)
 
+    const n = thread.messages.length
     try {
-      await navigator.clipboard.writeText(markdown)
-      toast(`Extracted ${messages.length} message(s).\nMarkdown copied & downloaded.`)
+      await navigator.clipboard.writeText(content)
+      toast(`Extracted ${n} message(s).\nCopied & downloaded (.${ext}).`)
     } catch {
-      toast(`Extracted ${messages.length} message(s).\nDownloaded — clipboard copy failed.`)
+      toast(`Extracted ${n} message(s).\nDownloaded — clipboard copy failed.`)
     }
   } catch {
     toast("Extraction failed — Gmail's layout may have changed.")

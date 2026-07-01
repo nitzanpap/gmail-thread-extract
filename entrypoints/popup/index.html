@@ -9,7 +9,7 @@
         color-scheme: light dark;
       }
       body {
-        width: 260px;
+        width: 320px;
         margin: 0;
         padding: 16px;
         font: 13px/1.4 "Google Sans", Roboto, Arial, sans-serif;
@@ -18,7 +18,7 @@
         margin: 0 0 12px;
         font-size: 14px;
       }
-      button {
+      button.primary {
         width: 100%;
         padding: 10px 12px;
         border: none;
@@ -28,7 +28,7 @@
         font: 600 13px/1 inherit;
         cursor: pointer;
       }
-      button:disabled {
+      button.primary:disabled {
         background: #9aa0a6;
         cursor: default;
       }
@@ -38,25 +38,143 @@
         color: #5f6368;
         font-size: 12px;
       }
+      #panel[hidden] {
+        display: none;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .field {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .field label {
+        font-size: 11px;
+        color: #5f6368;
+      }
+      select {
+        width: 100%;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(128, 128, 128, 0.4);
+        background: transparent;
+        font: inherit;
+      }
+      #preview {
+        margin-top: 12px;
+        max-height: 200px;
+        overflow: auto;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        background: rgba(128, 128, 128, 0.08);
+        font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .actions button {
+        flex: 1;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #1a73e8;
+        background: transparent;
+        color: #1a73e8;
+        font: 600 12px/1 inherit;
+        cursor: pointer;
+      }
+      details {
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(128, 128, 128, 0.3);
+      }
+      summary {
+        cursor: pointer;
+        font-size: 12px;
+        color: #5f6368;
+      }
       .setting {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-top: 16px;
-        padding-top: 12px;
-        border-top: 1px solid rgba(128, 128, 128, 0.3);
+        margin-top: 12px;
         font-size: 12px;
+      }
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 8px;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(128, 128, 128, 0.4);
+        background: transparent;
+        font: 11px/1.4 ui-monospace, Menlo, monospace;
+        resize: vertical;
+      }
+      .caption {
+        font-size: 11px;
+        color: #5f6368;
+        margin: 4px 0 0;
       }
     </style>
   </head>
   <body>
     <h1>Gmail Thread Extractor</h1>
-    <button id="extract" type="button">Extract current thread</button>
+    <button id="extract" class="primary" type="button">Extract current thread</button>
     <p id="hint"></p>
-    <label class="setting">
-      <input id="toggle" type="checkbox" />
-      Show floating button in Gmail
-    </label>
+
+    <div id="panel" hidden>
+      <div class="row">
+        <div class="field">
+          <label for="format">Format</label>
+          <select id="format">
+            <option value="markdown">Markdown</option>
+            <option value="text">Plain text</option>
+            <option value="json">JSON</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="range">Messages</label>
+          <select id="range">
+            <option value="0">All</option>
+            <option value="1">Last 1</option>
+            <option value="3">Last 3</option>
+            <option value="5">Last 5</option>
+            <option value="10">Last 10</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="preview"></div>
+
+      <div class="actions">
+        <button id="copy" type="button">Copy</button>
+        <button id="download" type="button">Download</button>
+      </div>
+    </div>
+
+    <details>
+      <summary>Options</summary>
+      <label class="setting">
+        <input id="includeAttachments" type="checkbox" />
+        Include attachment list
+      </label>
+      <label class="setting">
+        <input id="toggle" type="checkbox" />
+        Show floating button in Gmail
+      </label>
+      <textarea id="boilerplate" rows="3" placeholder="Strip lines containing… (one phrase per line)"></textarea>
+      <p class="caption">e.g. “Sent from my iPhone”, a confidentiality notice, a footer line.</p>
+    </details>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

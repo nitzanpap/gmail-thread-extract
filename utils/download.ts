@@ -1,6 +1,10 @@
-/** Trigger a client-side `.md` download via a synthetic anchor click. */
-export function downloadMarkdown(filename: string, text: string): void {
-  const blob = new Blob([text], { type: "text/markdown;charset=utf-8" })
+/** Trigger a client-side text-file download via a synthetic anchor click. */
+export function downloadFile(
+  filename: string,
+  text: string,
+  mime = "text/plain;charset=utf-8"
+): void {
+  const blob = new Blob([text], { type: mime })
   const url = URL.createObjectURL(blob)
 
   const a = document.createElement("a")

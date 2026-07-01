@@ -1,4 +1,4 @@
-import type { Message } from "../types"
+import type { Attachment, Message } from "../types"
 
 /** Sanitize a thread subject into a safe download filename. */
 export function safeFilename(name: string): string {
@@ -30,9 +30,18 @@ function messageBlock(msg: Message, index: number): string[] {
   ].filter((line): line is string => line !== null)
 }
 
+function attachmentLine(a: Attachment): string {
+  return a.url ? `- [${a.name}](${a.url})` : `- ${a.name}`
+}
+
 /** Serialize a thread to the Markdown format consumed by an AI agent. */
-export function toMarkdown(subject: string, messages: Message[], extractedAt: string): string {
-  return [
+export function toMarkdown(
+  subject: string,
+  messages: Message[],
+  extractedAt: string,
+  attachments: Attachment[] = []
+): string {
+  const lines = [
     "# Gmail Thread",
     "",
     `**Subject:** ${subject}`,
@@ -42,5 +51,9 @@ export function toMarkdown(subject: string, messages: Message[], extractedAt: st
     "---",
     "",
     ...messages.flatMap(messageBlock)
-  ].join("\n")
+  ]
+  if (attachments.length > 0) {
+    lines.push("## Attachments", "", ...attachments.map(attachmentLine), "")
+  }
+  return lines.join("\n")
 }

@@ -1,4 +1,5 @@
-import type { Message } from "../types"
+import type { Message, Thread } from "../types"
+import { extractAttachments } from "./attachments"
 import { cleanBody, cleanText, improveReadableSpacing } from "./clean"
 import { extractViaPrintView } from "./printView"
 
@@ -144,26 +145,36 @@ export function isThreadOpen(): boolean {
 const COLLAPSED_SELECTOR = ".kv, .kQ, .adv"
 
 /**
- * aria-label of Gmail's "Expand all" toolbar button. Locale-dependent — add
- * patterns for your Gmail UI language if auto-expand stops working.
- * ponytail: matched by label text; a single click expands every collapsed
- * message and the super-collapsed bundle (verified). Messages that can't be
- * expanded are simply skipped and the message count reflects that.
+ * Gmail's "Expand all" toolbar button, matched by aria-label across the major
+ * UI languages (fallback path only — the primary print-view path needs no
+ * expansion, so for most users locale is irrelevant). Add your language's label
+ * if auto-expand ever misses. A single click expands every collapsed message and
+ * the super-collapsed bundle (verified).
+ * ponytail: matched only by label — NOT by class/jsaction, which are obfuscated
+ * and non-unique (the observed jsaction token is shared by ~35 buttons, so
+ * clicking by it would hit the wrong control). Unlisted locales degrade to
+ * extracting the already-visible messages.
  */
-const EXPAND_ALL_LABELS: ReadonlyArray<RegExp> = [/expand all/i]
+const EXPAND_ALL_LABELS: ReadonlyArray<RegExp> = [
+  /expand all/i, // English
+  /alle (erweitern|maximieren|einblenden)/i, // German
+  /tout (développer|afficher)/i, // French
+  /(mostrar|expandir) todo/i, // Spanish / Portuguese
+  /mostra tutto/i, // Italian
+  /alles uitvouwen/i, // Dutch
+  /развернуть все|все развернуть/i // Russian
+]
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 function findExpandAllButton(): HTMLElement | null {
-  for (const button of Array.from(document.querySelectorAll<HTMLElement>("button[aria-label]"))) {
-    const label = button.getAttribute("aria-label") || ""
-    if (EXPAND_ALL_LABELS.some(re => re.test(label))) {
-      return button
-    }
-  }
-  return null
+  return (
+    Array.from(document.querySelectorAll<HTMLElement>("button[aria-label]")).find(button =>
+      EXPAND_ALL_LABELS.some(re => re.test(button.getAttribute("aria-label") || ""))
+    ) || null
+  )
 }
 
 /**
@@ -195,12 +206,7 @@ export async function expandThread(): Promise<void> {
   await delay(200) // brief settle for the last body to paint
 }
 
-/**
- * Extract the open thread. Prefers Gmail's print view (complete, pre-expanded,
- * stable selectors); falls back to expanding and scraping the live DOM if the
- * print fetch/parse yields nothing.
- */
-export async function extractThread(): Promise<{ subject: string; messages: Message[] }> {
+async function extractSubjectAndMessages(): Promise<{ subject: string; messages: Message[] }> {
   const viaPrint = await extractViaPrintView()
   if (viaPrint) {
     return viaPrint
@@ -209,4 +215,15 @@ export async function extractThread(): Promise<{ subject: string; messages: Mess
   debug("stage=extractThread print view unavailable, falling back to live DOM")
   await expandThread()
   return { subject: extractSubject(), messages: extractMessages() }
+}
+
+/**
+ * Extract the open thread. Prefers Gmail's print view (complete, pre-expanded,
+ * stable selectors); falls back to expanding and scraping the live DOM if the
+ * print fetch/parse yields nothing. Attachment names/links are read from the
+ * live thread DOM regardless of which path produced the messages.
+ */
+export async function extractThread(): Promise<Thread> {
+  const { subject, messages } = await extractSubjectAndMessages()
+  return { subject, messages, attachments: extractAttachments() }
 }

@@ -1,20 +1,30 @@
 # Gmail Thread Extractor
 
 A minimal cross-browser (Chrome + Firefox) extension that extracts an open Gmail conversation as
-clean Markdown — copied to the clipboard and downloaded as a `.md` file named after the subject,
+clean, structured text — copied to the clipboard and downloaded as a file named after the subject,
 ready to paste into an AI agent.
 
 You can trigger extraction two ways:
 
-- the **floating Extract button** on the thread page, or
-- the **toolbar icon popup** (Extract current thread).
+- the **floating Extract button** on the thread page (a quick copy + download using your saved
+  options), or
+- the **toolbar icon popup** — extract, **preview** the output, and tweak options before copying or
+  downloading.
 
 The whole thread is captured — not just the open message. The primary path fetches Gmail's **print
 view** (`?view=pt`), a single static document containing every message already expanded, with stable
 semantic markup. If that ever fails, it **falls back** to expanding and scraping the live thread DOM.
 
-The popup also has one setting: **Show floating button in Gmail**, to hide the on-page button if you
-prefer to extract only from the toolbar.
+### Options (in the popup)
+
+- **Format** — Markdown, plain text, or JSON.
+- **Messages** — the whole thread, or just the last N.
+- **Include attachment list** — appends attachment filenames/links found in the thread.
+- **Strip lines containing…** — drop boilerplate lines (signatures, disclaimers) by phrase.
+- **Show floating button in Gmail** — hide the on-page button and extract only from the toolbar.
+
+Format, attachment, boilerplate, and floating-button choices persist and are also used by the
+floating button; the message-range is a per-extraction choice.
 
 ## Develop
 
