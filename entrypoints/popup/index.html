@@ -124,6 +124,28 @@
         color: #5f6368;
         margin: 4px 0 0;
       }
+      footer {
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(128, 128, 128, 0.3);
+        text-align: center;
+        font-size: 12px;
+        color: #5f6368;
+      }
+      footer p {
+        margin: 4px 0;
+      }
+      footer .author {
+        color: #1a73e8;
+        font-weight: 600;
+      }
+      footer a {
+        color: #1a73e8;
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -174,6 +196,19 @@
       <textarea id="boilerplate" rows="3" placeholder="Strip lines containing… (one phrase per line)"></textarea>
       <p class="caption">e.g. “Sent from my iPhone”, a confidentiality notice, a footer line.</p>
     </details>
+
+    <footer>
+      <p>Developed by <span class="author">Nitzan Papini</span>, for <span id="browserName">Chrome</span></p>
+      <p>
+        <a
+          href="https://docs.google.com/forms/d/1ViwZsXRSlJqij4nGp84F4gT2f4vBhZkGDQU25F9ESPI"
+          target="_blank"
+          rel="noopener"
+          >Feedback &amp; Requests &amp; Support</a
+        >
+      </p>
+      <p>Version: <span id="version"></span></p>
+    </footer>
 
     <script type="module" src="./main.ts"></script>
   </body>

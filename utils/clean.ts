@@ -102,7 +102,11 @@ export function removeNoiseLines(text: string): string {
     /^Follow us on LinkedIn!?$/i,
     /^Please consider the environment before printing this e-mail$/i,
     /^P$/i,
-    /^P\s+Please consider the environment before printing this e-mail$/i
+    /^P\s+Please consider the environment before printing this e-mail$/i,
+    // Gmail's collapsed-quote placeholder — the quoted content it stands in for
+    // is already captured as its own message in the thread, so drop the marker.
+    /^\[quoted text hidden\]$/i,
+    /^\[message clipped\].*$/i
   ]
 
   return text

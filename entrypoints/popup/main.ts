@@ -33,6 +33,11 @@ async function init(): Promise<void> {
   const toggle = el<HTMLInputElement>("toggle")
   const boilerplate = el<HTMLTextAreaElement>("boilerplate")
 
+  // Footer: version from the manifest, browser from the build target.
+  el<HTMLSpanElement>("version").textContent = browser.runtime.getManifest().version
+  const target = import.meta.env.BROWSER
+  el<HTMLSpanElement>("browserName").textContent = target.charAt(0).toUpperCase() + target.slice(1)
+
   let thread: Thread | null = null
 
   const settings = await getSettings()
