@@ -1,6 +1,6 @@
 import type { Message, Thread } from "../types"
 import { extractAttachments } from "./attachments"
-import { cleanBody, cleanText, improveReadableSpacing } from "./clean"
+import { cleanBody, cleanText, improveReadableSpacing, isForwardedContent } from "./clean"
 import { extractViaPrintView } from "./printView"
 
 /**
@@ -54,11 +54,16 @@ function findMessageNodes(): Element[] {
 }
 
 function stripNoiseNodes(clone: Element): void {
+  // Drop reply quotes but keep forwarded content (unique to this message).
+  for (const quote of Array.from(clone.querySelectorAll(".gmail_quote"))) {
+    if (!isForwardedContent(quote.textContent || "")) {
+      quote.remove()
+    }
+  }
   const selector = [
     "style",
     "script",
     "noscript",
-    ".gmail_quote",
     ".gmail_signature",
     ".yj6qo",
     ".adL",
@@ -98,12 +103,14 @@ function nodeToMessage(node: Element): Message | null {
   const toText = getText(toEl)
 
   const bodyEl = node.querySelector(".a3s.aiL") || node.querySelector(".a3s")
+  const rawText = (bodyEl as HTMLElement | null)?.innerText || ""
   const clone = bodyEl?.cloneNode(true) as HTMLElement | undefined
   if (clone) {
     stripNoiseNodes(clone)
   }
 
-  const body = cleanBody(clone?.innerText || "")
+  // Safety net: never reduce a non-empty message to nothing.
+  const body = cleanBody(clone?.innerText || "") || cleanBody(rawText, true)
   if (!body) {
     return null
   }

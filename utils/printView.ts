@@ -1,5 +1,5 @@
 import type { Message } from "../types"
-import { cleanBody, cleanText } from "./clean"
+import { cleanBody, cleanText, isForwardedContent } from "./clean"
 
 /**
  * Primary extraction path: fetch Gmail's print view (`?view=pt`) and parse it.
@@ -74,18 +74,26 @@ function parseMessage(block: HTMLTableElement): Message | null {
   const date = rows[0].cells[1]?.textContent?.trim() || ""
   const toText = cleanText(block.querySelector(".recipient")?.textContent || "")
 
-  // Body lives in the first nested table; drop signature/quote noise first.
+  // Body lives in the first nested table.
   const bodyEl = block.querySelector("table")
+  let body = ""
   if (bodyEl) {
+    const rawText = domText(bodyEl)
     for (const noise of Array.from(
-      bodyEl.querySelectorAll(
-        ".gmail_quote, .gmail_signature, .gmail_signature_prefix, style, script"
-      )
+      bodyEl.querySelectorAll(".gmail_signature, .gmail_signature_prefix, style, script")
     )) {
       noise.remove()
     }
+    // Drop reply quotes (redundant with other messages) but keep forwarded
+    // content (unique to this message).
+    for (const quote of Array.from(bodyEl.querySelectorAll(".gmail_quote"))) {
+      if (!isForwardedContent(quote.textContent || "")) {
+        quote.remove()
+      }
+    }
+    // Safety net: never reduce a non-empty message to nothing.
+    body = cleanBody(domText(bodyEl)) || cleanBody(rawText, true)
   }
-  const body = cleanBody(bodyEl ? domText(bodyEl) : "")
 
   if (!body && !senderName) {
     return null

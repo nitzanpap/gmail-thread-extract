@@ -58,25 +58,33 @@ export function finalPolish(text: string): string {
 }
 
 /**
- * Cut everything from the first quoted/forwarded section onward — that content
- * belongs to an earlier message in the thread and we extract those separately.
+ * Marks a forwarded-message block. Unlike a reply quote (redundant — the quoted
+ * message is elsewhere in the thread), a forward's content is unique and must be
+ * kept, so we detect it to avoid stripping/cutting it away.
+ */
+export const FORWARD_MARKER = /-{2,}\s*(Forwarded message|Weitergeleitete Nachricht)\s*-{2,}/i
+
+export function isForwardedContent(text: string): boolean {
+  return FORWARD_MARKER.test(text)
+}
+
+/**
+ * Cut everything from the first quoted REPLY section onward — that content is an
+ * earlier message we already extract separately. Forwarded content is NOT cut
+ * (it's unique); those markers are intentionally absent here.
  */
 export function removeAfterPatterns(text: string): string {
   const patterns = [
-    // Gmail / webmail quote markers.
+    // Gmail / webmail reply-quote markers.
     /\nOn .+ wrote:/i,
     /\nOn .+ at .+ wrote:/i,
     // Inline Gmail quote pattern, when Gmail collapses it into the same line.
     /\sOn [A-Z][a-z]{2},? .+ wrote:/i,
     /\sOn [A-Z][a-z]{2},? .+ <.+> wrote:/i,
-    // German Outlook quote markers.
+    // German Outlook reply markers.
     /\nVon: .+/i,
     /\nGesendet: .+/i,
-    /\n-----Ursprüngliche Nachricht-----/i,
-    /\n-{2,} Weitergeleitete Nachricht -{2,}/i,
-    // English forwarded markers.
-    /\n-{2,} Forwarded message -{2,}/i,
-    /\nFrom: .+\nSent: .+\nTo: .+\nSubject: .+/i
+    /\n-----Ursprüngliche Nachricht-----/i
   ]
 
   let cutAt = -1
@@ -118,11 +126,17 @@ export function removeNoiseLines(text: string): string {
     .trim()
 }
 
-/** Full cleaning pipeline for a single message body. */
-export function cleanBody(text: string): string {
+/**
+ * Full cleaning pipeline for a single message body. With `keepQuotes`, the
+ * reply-quote cut is skipped — used as a safety net so a body that is entirely
+ * quoted/forwarded content is never reduced to nothing.
+ */
+export function cleanBody(text: string, keepQuotes = false): string {
   let result = cleanText(text)
   result = improveReadableSpacing(result)
-  result = removeAfterPatterns(result)
+  if (!keepQuotes) {
+    result = removeAfterPatterns(result)
+  }
   result = removeNoiseLines(result)
   result = improveReadableSpacing(result)
   result = finalPolish(result)
