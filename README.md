@@ -1,8 +1,30 @@
-# Gmail Thread Extractor
+<p align="center">
+  <img src="store-assets/promo-marquee-1400x560.png" alt="Gmail Thread Extractor" width="640" />
+</p>
 
-A minimal cross-browser (Chrome + Firefox) extension that extracts an open Gmail conversation as
-clean, structured text — copied to the clipboard and downloaded as a file named after the subject,
-ready to paste into an AI agent.
+<p align="center">
+  A minimal cross-browser (Chrome&nbsp;+&nbsp;Firefox) extension that extracts an open Gmail
+  conversation as clean, structured text — copied to your clipboard and downloaded, ready to paste
+  into an AI agent.
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/gmail-thread-extractor/mnadkdmihpjmjjhkifhdakfjjgnpfipp">
+    <img alt="Chrome Web Store version" src="https://img.shields.io/chrome-web-store/v/mnadkdmihpjmjjhkifhdakfjjgnpfipp?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white&color=1a73e8" />
+  </a>
+  <a href="https://chromewebstore.google.com/detail/gmail-thread-extractor/mnadkdmihpjmjjhkifhdakfjjgnpfipp">
+    <img alt="Users" src="https://img.shields.io/chrome-web-store/users/mnadkdmihpjmjjhkifhdakfjjgnpfipp?label=users&color=1a73e8" />
+  </a>
+  <a href="https://chromewebstore.google.com/detail/gmail-thread-extractor/mnadkdmihpjmjjhkifhdakfjjgnpfipp">
+    <img alt="Rating" src="https://img.shields.io/chrome-web-store/rating/mnadkdmihpjmjjhkifhdakfjjgnpfipp?label=rating&color=1a73e8" />
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://chromewebstore.google.com/detail/gmail-thread-extractor/mnadkdmihpjmjjhkifhdakfjjgnpfipp">→ Install from the Chrome Web Store</a></b>
+</p>
+
+---
 
 You can trigger extraction two ways:
 
@@ -14,6 +36,10 @@ You can trigger extraction two ways:
 The whole thread is captured — not just the open message. The primary path fetches Gmail's **print
 view** (`?view=pt`), a single static document containing every message already expanded, with stable
 semantic markup. If that ever fails, it **falls back** to expanding and scraping the live thread DOM.
+
+<p align="center">
+  <img src="store-assets/screenshot-1280x800.png" alt="Extract any Gmail thread as clean Markdown" width="720" />
+</p>
 
 ### Options (in the popup)
 
