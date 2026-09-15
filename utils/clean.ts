@@ -24,8 +24,14 @@ export function cleanText(text: string): string {
     .trim()
 }
 
-/** Re-add spacing/line breaks lost when Gmail flattens HTML to innerText. */
-export function improveReadableSpacing(text: string): string {
+/**
+ * A whole line that is just a Markdown image marker, e.g. `![alt](https://…)`.
+ * Its URL must survive verbatim — `.replace(/\.([A-Z])/…)` below and friends
+ * would inject spaces into a signed Gmail attachment URL.
+ */
+const IMAGE_LINE = /^!\[[^\]]*\]\(\S+\)$/
+
+function respace(text: string): string {
   let result = text
     // Fix missing spaces after punctuation.
     .replace(/,([A-Z])/g, ", $1")
@@ -46,7 +52,22 @@ export function improveReadableSpacing(text: string): string {
     result = result.replace(pattern, replacement)
   }
 
-  return result.replace(/\n{3,}/g, "\n\n").trim()
+  // No trim here: several rules above work by PREPENDING a newline, which the
+  // per-line caller below would otherwise trim straight back off.
+  return result
+}
+
+/** Re-add spacing/line breaks lost when Gmail flattens HTML to innerText. */
+export function improveReadableSpacing(text: string): string {
+  // Image markers are passed through untouched; everything else is respaced.
+  const spaced = text.includes("![")
+    ? text
+        .split("\n")
+        .map(line => (IMAGE_LINE.test(line.trim()) ? line.trim() : respace(line)))
+        .join("\n")
+    : respace(text)
+
+  return spaced.replace(/\n{3,}/g, "\n\n").trim()
 }
 
 /** Last-pass cleanup of artifacts introduced by the spacing pass. */

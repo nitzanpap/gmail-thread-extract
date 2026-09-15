@@ -96,6 +96,12 @@ Open a Gmail conversation and click the floating **Extract** button.
    nothing (logged out, or Gmail changed the print view), it expands collapsed messages and scrapes
    the live thread using Gmail's obfuscated classes (`.adn`, `.a3s`, `.gD`, …).
 
+Inline body images (pasted screenshots, embedded charts) survive as Markdown image references —
+`![alt](url)` at the image's position — since the body is otherwise serialized to plain text
+([`utils/images.ts`](utils/images.ts)). Signature logos, social icons and tracking pixels are
+skipped by size. The URL is Gmail's session-scoped attachment link: it opens in the signed-in
+browser, not from an anonymous fetch.
+
 Two fallback-only caveats (the print path avoids both): Gmail's obfuscated class names change over
 time and may need updating in `utils/extract.ts` (flip the `DEBUG` flag to trace which stage returns
 nothing); and auto-expand matches the "Expand all" button by its **English** `aria-label` — for

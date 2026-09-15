@@ -1,5 +1,6 @@
 import type { Message } from "../types"
 import { cleanBody, cleanText, isForwardedContent } from "./clean"
+import { inlineImages } from "./images"
 
 /**
  * Primary extraction path: fetch Gmail's print view (`?view=pt`) and parse it.
@@ -27,6 +28,11 @@ function accountIndex(): string {
 export function getLegacyThreadId(): string | null {
   const el = document.querySelector("[data-legacy-message-id]")
   return el?.getAttribute("data-legacy-message-id") || null
+}
+
+/** Base the print view's query-only image srcs (`?ui=2&…`) resolve against. */
+function printBase(): string {
+  return `https://mail.google.com/mail/u/${accountIndex()}/`
 }
 
 function printUrl(threadId: string): string {
@@ -62,7 +68,7 @@ function domText(node: Node): string {
   return out
 }
 
-function parseMessage(block: HTMLTableElement): Message | null {
+function parseMessage(block: HTMLTableElement, base: string): Message | null {
   const rows = Array.from(block.rows)
   if (rows.length === 0) {
     return null
@@ -78,6 +84,8 @@ function parseMessage(block: HTMLTableElement): Message | null {
   const bodyEl = block.querySelector("table")
   let body = ""
   if (bodyEl) {
+    // Before any text pass: <img> has no text and would otherwise vanish.
+    inlineImages(bodyEl, base)
     const rawText = domText(bodyEl)
     for (const noise of Array.from(
       bodyEl.querySelectorAll(".gmail_signature, .gmail_signature_prefix, style, script")
@@ -102,11 +110,16 @@ function parseMessage(block: HTMLTableElement): Message | null {
 }
 
 /** Parse a print-view HTML document into subject + messages. */
-export function parsePrintThread(html: string): { subject: string; messages: Message[] } {
+export function parsePrintThread(
+  html: string,
+  base = "https://mail.google.com/mail/u/0/"
+): { subject: string; messages: Message[] } {
   const doc = new DOMParser().parseFromString(html, "text/html")
   const subject = doc.title.replace(/^Gmail - /, "").trim()
   const blocks = Array.from(doc.querySelectorAll<HTMLTableElement>("table.message"))
-  const messages = blocks.map(parseMessage).filter((m): m is Message => m !== null)
+  const messages = blocks
+    .map(block => parseMessage(block, base))
+    .filter((m): m is Message => m !== null)
   return { subject, messages }
 }
 
@@ -133,7 +146,7 @@ export async function extractViaPrintView(): Promise<{
     if (!html.includes('class="message"')) {
       return null // login page or unexpected response
     }
-    const result = parsePrintThread(html)
+    const result = parsePrintThread(html, printBase())
     return result.messages.length > 0 ? result : null
   } catch {
     return null

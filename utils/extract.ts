@@ -1,6 +1,7 @@
 import type { Message, Thread } from "../types"
 import { extractAttachments } from "./attachments"
 import { cleanBody, cleanText, improveReadableSpacing, isForwardedContent } from "./clean"
+import { inlineImages } from "./images"
 import { extractViaPrintView } from "./printView"
 
 /**
@@ -103,9 +104,13 @@ function nodeToMessage(node: Element): Message | null {
   const toText = getText(toEl)
 
   const bodyEl = node.querySelector(".a3s.aiL") || node.querySelector(".a3s")
-  const rawText = (bodyEl as HTMLElement | null)?.innerText || ""
+  let rawText = (bodyEl as HTMLElement | null)?.innerText || ""
   const clone = bodyEl?.cloneNode(true) as HTMLElement | undefined
   if (clone) {
+    // Images first — innerText drops <img> silently — then snapshot the
+    // safety-net text, so it keeps them too, then strip noise.
+    inlineImages(clone, location.href)
+    rawText = clone.innerText || rawText
     stripNoiseNodes(clone)
   }
 

@@ -27,6 +27,20 @@ describe("cleanBody", () => {
     expect(out).toContain("Please review your account.")
   })
 
+  it("passes a Markdown image marker through untouched", () => {
+    // Punctuation-before-uppercase inside the URL is exactly what the spacing
+    // pass would otherwise split ("...v2.Abc" -> "...v2. Abc").
+    const marker = "![chart](https://mail.google.com/mail/u/0/?ui=2&attbid=v2.Abc:Def,Ghi)"
+    expect(cleanBody(`Hello\n${marker}\nRegards`)).toContain(marker)
+  })
+
+  it("still spaces sign-offs in a body that contains an image marker", () => {
+    const withImage = cleanBody("Body text.\n![chart](https://x/?a=1)\nRegards\nAlice")
+    expect(withImage).toContain("\n\nRegards")
+    // …and identically to the same body without one.
+    expect(cleanBody("Body text.\nsomething\nRegards\nAlice")).toContain("\n\nRegards")
+  })
+
   it("keepQuotes preserves everything as a safety net", () => {
     const text = "On Mon Alice wrote:\nquoted"
     expect(cleanBody(text, true)).toContain("quoted")

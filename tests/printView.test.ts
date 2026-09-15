@@ -17,6 +17,18 @@ const PRINT_HTML = `
 </table>
 <table class="message">
   <tr>
+    <td><font size="-1"><b>Grace Hopper</b> &lt;grace@example.com&gt;</font></td>
+    <td align="right"><font size="-1">Jun 22, 2026, 12:50 PM</font></td>
+  </tr>
+  <tr><td colspan="2"><font size="-1" class="recipient"><div>to me</div></font></td></tr>
+  <tr><td colspan="2"><table><tr><td><div>See the readings below.<br>
+    <img width="1849" height="818" src="?ui=2&amp;attid=0.1&amp;view=fimg&amp;disp=emb"><br>
+    Regards<br>
+    <img width="19" height="19" alt="phone icon" src="?ui=2&amp;attid=0.2&amp;view=fimg&amp;disp=emb">
+  </div></td></tr></table></td></tr>
+</table>
+<table class="message">
+  <tr>
     <td><font size="-1"><b>Alan Turing</b> &lt;alan@example.com&gt;</font></td>
     <td align="right"><font size="-1">Jun 22, 2026, 12:57 PM</font></td>
   </tr>
@@ -33,7 +45,7 @@ describe("parsePrintThread", () => {
   })
 
   it("parses one message per .message block", () => {
-    expect(messages).toHaveLength(2)
+    expect(messages).toHaveLength(3)
   })
 
   it("extracts sender name, email, date and recipients", () => {
@@ -51,7 +63,23 @@ describe("parsePrintThread", () => {
   })
 
   it("strips gmail_signature noise from the body", () => {
-    expect(messages[1].body).toContain("Second body.")
-    expect(messages[1].body).not.toContain("Sent from my device")
+    expect(messages[2].body).toContain("Second body.")
+    expect(messages[2].body).not.toContain("Sent from my device")
+  })
+
+  it("keeps inline body images as Markdown, with the query-only src resolved", () => {
+    expect(messages[1].body).toContain(
+      "![image](https://mail.google.com/mail/u/0/?ui=2&attid=0.1&view=fimg&disp=emb)"
+    )
+  })
+
+  it("drops signature-sized icons", () => {
+    expect(messages[1].body).not.toContain("phone icon")
+    expect(messages[1].body).not.toContain("attid=0.2")
+  })
+
+  it("leaves the image URL untouched by the text-spacing pass", () => {
+    const url = messages[1].body.match(/\]\((\S+)\)/)?.[1]
+    expect(url).toBe("https://mail.google.com/mail/u/0/?ui=2&attid=0.1&view=fimg&disp=emb")
   })
 })
