@@ -83,3 +83,43 @@ describe("parsePrintThread", () => {
     expect(url).toBe("https://mail.google.com/mail/u/0/?ui=2&attid=0.1&view=fimg&disp=emb")
   })
 })
+
+describe("parsePrintThread quotes", () => {
+  const message = (body: string) => `
+<html><head><title>Gmail - t</title></head><body>
+<table class="message">
+  <tr><td><b>Limor</b> &lt;limor@example.com&gt;</td><td>Sep 16, 2026, 6:45 PM</td></tr>
+  <tr><td colspan="2"><font class="recipient"><div>to me</div></font></td></tr>
+  <tr><td colspan="2"><table><tr><td>${body}</td></tr></table></td></tr>
+</table></body></html>`
+
+  it("keeps reply history quoted inside a forward — it's not elsewhere in this thread", () => {
+    const [msg] = parsePrintThread(
+      message(`<div dir="rtl">These are the photos.<br><br>
+  <div class="gmail_quote">
+    <div class="gmail_attr" dir="ltr">---------- Forwarded message ---------<br>From: Limor &lt;limor@example.com&gt;<br>Date: Wed, Sep 16, 2026 at 9:26 AM<br>Subject: Re: Fw: meter numbers<br>To: Tom &lt;tom@example.com&gt;<br></div><br><br>
+    <div dir="rtl">Thanks a lot!</div><br>
+    <div class="gmail_quote">
+      <div class="gmail_attr" dir="ltr">On Wed, Sep 16, 2026 at 9:00 AM Tom &lt;tom@example.com&gt; wrote:<br></div>
+      <blockquote class="gmail_quote"><div>Meter numbers:<br>1392627<br>1392631</div></blockquote>
+    </div>
+  </div>
+</div>`)
+    ).messages
+    expect(msg.body).toContain("These are the photos.")
+    expect(msg.body).toContain("Forwarded message")
+    expect(msg.body).toContain("Thanks a lot!")
+    expect(msg.body).toContain("Tom <tom@example.com> wrote:")
+    expect(msg.body).toContain("1392627")
+    expect(msg.body).toContain("1392631")
+  })
+
+  it("still drops a plain reply quote outside any forward", () => {
+    const [msg] = parsePrintThread(
+      message(
+        '<div>My reply.<div class="gmail_quote"><div class="gmail_attr">On Mon, Jun 22, 2026 Ada wrote:</div><blockquote class="gmail_quote">old stuff</blockquote></div></div>'
+      )
+    ).messages
+    expect(msg.body).toBe("My reply.")
+  })
+})

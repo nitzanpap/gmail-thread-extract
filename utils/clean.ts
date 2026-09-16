@@ -89,10 +89,54 @@ export function isForwardedContent(text: string): boolean {
   return FORWARD_MARKER.test(text)
 }
 
+/** A quote's own text, excluding quotes nested inside it. */
+function ownText(quote: Element): string {
+  const copy = quote.cloneNode(true) as Element
+  for (const nested of Array.from(copy.querySelectorAll(".gmail_quote"))) {
+    nested.remove()
+  }
+  return copy.textContent || ""
+}
+
+/**
+ * True when `el` is, or sits inside, a forwarded `.gmail_quote`. A forward
+ * carries its own conversation: reply quotes nested inside it are usually
+ * history from another thread, so they're kept — duplicating a same-thread
+ * forward's history beats dropping content that exists nowhere else.
+ *
+ * A quote is a forward only if the marker is in its OWN content: a reply quote
+ * that merely contains a forward deeper down is still a reply.
+ */
+export function isInsideForward(el: Element): boolean {
+  for (
+    let q = el.closest(".gmail_quote");
+    q;
+    q = q.parentElement?.closest(".gmail_quote") ?? null
+  ) {
+    if (isForwardedContent(ownText(q))) {
+      return true
+    }
+  }
+  return false
+}
+
+/** Remove reply quotes (redundant with the thread's other messages), keeping forwards whole. */
+export function stripReplyQuotes(root: Element): void {
+  for (const quote of Array.from(root.querySelectorAll(".gmail_quote"))) {
+    // The whole-text check keeps a quote that contains a forward anywhere, as
+    // before; isInsideForward adds the reply history nested within a forward.
+    if (!isForwardedContent(quote.textContent || "") && !isInsideForward(quote)) {
+      quote.remove()
+    }
+  }
+}
+
 /**
  * Cut everything from the first quoted REPLY section onward — that content is an
  * earlier message we already extract separately. Forwarded content is NOT cut
- * (it's unique); those markers are intentionally absent here.
+ * (it's unique): forward markers are absent from the patterns, and nothing after
+ * the first forward marker is searched, since a reply marker there belongs to
+ * the forwarded conversation.
  */
 export function removeAfterPatterns(text: string): string {
   const patterns = [
@@ -108,9 +152,12 @@ export function removeAfterPatterns(text: string): string {
     /\n-----Ursprüngliche Nachricht-----/i
   ]
 
+  const forwardAt = text.search(FORWARD_MARKER)
+  const searchable = forwardAt >= 0 ? text.slice(0, forwardAt) : text
+
   let cutAt = -1
   for (const pattern of patterns) {
-    const match = text.match(pattern)
+    const match = searchable.match(pattern)
     if (match && match.index !== undefined && match.index > 0) {
       if (cutAt === -1 || match.index < cutAt) {
         cutAt = match.index

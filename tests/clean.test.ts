@@ -41,6 +41,24 @@ describe("cleanBody", () => {
     expect(cleanBody("Body text.\nsomething\nRegards\nAlice")).toContain("\n\nRegards")
   })
 
+  it("does not cut at a reply marker that sits inside forwarded content", () => {
+    const fwd =
+      "FYI\n---------- Forwarded message ---------\nFrom: Limor <l@x.com>\n\nThanks!\nOn Wed, Sep 16, 2026 at 9:00 AM Tom <t@x.com> wrote:\nMeter 1392627"
+    expect(cleanBody(fwd)).toContain("Meter 1392627")
+  })
+
+  it("does not cut at an Outlook header inside forwarded content", () => {
+    const fwd =
+      "---------- Weitergeleitete Nachricht ---------\nVon: Tom <t@x.com>\nGesendet: Mittwoch\nMeter 1392627"
+    expect(cleanBody(fwd)).toContain("Meter 1392627")
+  })
+
+  it("still cuts reply history that comes before a quoted forward", () => {
+    const text =
+      "My reply.\nOn Mon, Jun 22, 2026 Alice <a@x.com> wrote:\n---------- Forwarded message ---------\nold"
+    expect(cleanBody(text)).toBe("My reply.")
+  })
+
   it("keepQuotes preserves everything as a safety net", () => {
     const text = "On Mon Alice wrote:\nquoted"
     expect(cleanBody(text, true)).toContain("quoted")

@@ -1,6 +1,12 @@
 import type { Message, Thread } from "../types"
 import { extractAttachments } from "./attachments"
-import { cleanBody, cleanText, improveReadableSpacing, isForwardedContent } from "./clean"
+import {
+  cleanBody,
+  cleanText,
+  improveReadableSpacing,
+  isInsideForward,
+  stripReplyQuotes
+} from "./clean"
 import { inlineImages } from "./images"
 import { extractViaPrintView } from "./printView"
 
@@ -55,12 +61,7 @@ function findMessageNodes(): Element[] {
 }
 
 function stripNoiseNodes(clone: Element): void {
-  // Drop reply quotes but keep forwarded content (unique to this message).
-  for (const quote of Array.from(clone.querySelectorAll(".gmail_quote"))) {
-    if (!isForwardedContent(quote.textContent || "")) {
-      quote.remove()
-    }
-  }
+  stripReplyQuotes(clone)
   const selector = [
     "style",
     "script",
@@ -72,6 +73,10 @@ function stripNoiseNodes(clone: Element): void {
     "blockquote"
   ].join(", ")
   for (const el of Array.from(clone.querySelectorAll(selector))) {
+    // Quote markup inside a forward IS the forwarded conversation — keep it.
+    if (el.matches("blockquote, .im") && isInsideForward(el)) {
+      continue
+    }
     el.remove()
   }
 }
@@ -107,9 +112,13 @@ function nodeToMessage(node: Element): Message | null {
   let rawText = (bodyEl as HTMLElement | null)?.innerText || ""
   const clone = bodyEl?.cloneNode(true) as HTMLElement | undefined
   if (clone) {
-    // Images first — innerText drops <img> silently — then snapshot the
-    // safety-net text, so it keeps them too, then strip noise.
+    // Images first — innerText drops <img> silently — along with Gmail's
+    // hover toolbar over them ("Download", "Add to Drive", …); then snapshot
+    // the safety-net text, so it gets both; then strip noise.
     inlineImages(clone, location.href)
+    for (const toolbar of Array.from(clone.querySelectorAll(".a6S"))) {
+      toolbar.remove()
+    }
     rawText = clone.innerText || rawText
     stripNoiseNodes(clone)
   }

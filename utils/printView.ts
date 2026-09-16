@@ -1,5 +1,5 @@
 import type { Message } from "../types"
-import { cleanBody, cleanText, isForwardedContent } from "./clean"
+import { cleanBody, cleanText, stripReplyQuotes } from "./clean"
 import { inlineImages } from "./images"
 
 /**
@@ -92,13 +92,7 @@ function parseMessage(block: HTMLTableElement, base: string): Message | null {
     )) {
       noise.remove()
     }
-    // Drop reply quotes (redundant with other messages) but keep forwarded
-    // content (unique to this message).
-    for (const quote of Array.from(bodyEl.querySelectorAll(".gmail_quote"))) {
-      if (!isForwardedContent(quote.textContent || "")) {
-        quote.remove()
-      }
-    }
+    stripReplyQuotes(bodyEl)
     // Safety net: never reduce a non-empty message to nothing.
     body = cleanBody(domText(bodyEl)) || cleanBody(rawText, true)
   }
