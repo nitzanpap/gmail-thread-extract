@@ -8,7 +8,8 @@ import {
   stripReplyQuotes
 } from "./clean"
 import { inlineImages } from "./images"
-import { extractViaPrintView } from "./printView"
+import { domText, extractViaPrintView } from "./printView"
+import { type ParsedMessage, resolveQuotes } from "./quotes"
 
 /**
  * DOM scraping of the open Gmail conversation into typed Message objects.
@@ -60,8 +61,10 @@ function findMessageNodes(): Element[] {
   return nodes
 }
 
-function stripNoiseNodes(clone: Element): void {
-  stripReplyQuotes(clone)
+function stripNoiseNodes(clone: Element, keepQuotes = false): void {
+  if (!keepQuotes) {
+    stripReplyQuotes(clone)
+  }
   const selector = [
     "style",
     "script",
@@ -74,14 +77,14 @@ function stripNoiseNodes(clone: Element): void {
   ].join(", ")
   for (const el of Array.from(clone.querySelectorAll(selector))) {
     // Quote markup inside a forward IS the forwarded conversation — keep it.
-    if (el.matches("blockquote, .im") && isInsideForward(el)) {
+    if (el.matches("blockquote, .im") && (keepQuotes || isInsideForward(el))) {
       continue
     }
     el.remove()
   }
 }
 
-function nodeToMessage(node: Element): Message | null {
+function nodeToMessage(node: Element): ParsedMessage | null {
   const senderEl =
     node.querySelector(".gD[email]") ||
     node.querySelector("[email]") ||
@@ -110,46 +113,55 @@ function nodeToMessage(node: Element): Message | null {
 
   const bodyEl = node.querySelector(".a3s.aiL") || node.querySelector(".a3s")
   let rawText = (bodyEl as HTMLElement | null)?.innerText || ""
+  let withQuotes = ""
   const clone = bodyEl?.cloneNode(true) as HTMLElement | undefined
   if (clone) {
-    // Images first — innerText drops <img> silently — along with Gmail's
+    // Images first — the text pass drops <img> silently — along with Gmail's
     // hover toolbar over them ("Download", "Add to Drive", …); then snapshot
     // the safety-net text, so it gets both; then strip noise.
     inlineImages(clone, location.href)
     for (const toolbar of Array.from(clone.querySelectorAll(".a6S"))) {
       toolbar.remove()
     }
-    rawText = clone.innerText || rawText
+    rawText = domText(clone) || rawText
+    const quoted = clone.cloneNode(true) as HTMLElement
+    stripNoiseNodes(quoted, true)
+    withQuotes = cleanBody(domText(quoted), true)
     stripNoiseNodes(clone)
   }
 
   // Safety net: never reduce a non-empty message to nothing.
-  const body = cleanBody(clone?.innerText || "") || cleanBody(rawText, true)
+  const body = cleanBody(clone ? domText(clone) : "") || cleanBody(rawText, true)
   if (!body) {
     return null
   }
 
-  return { senderName, senderEmail, date, toText, body }
+  return {
+    message: { senderName, senderEmail, date, toText, body },
+    withQuotes: withQuotes || body
+  }
 }
 
 /** Extract every distinct message in the open thread, in document order. */
 export function extractMessages(): Message[] {
   const seen = new Set<string>()
-  const messages: Message[] = []
+  const parsed: ParsedMessage[] = []
 
   for (const node of findMessageNodes()) {
-    const message = nodeToMessage(node)
-    if (!message) {
+    const entry = nodeToMessage(node)
+    if (!entry) {
       continue
     }
+    const { message } = entry
 
     const signature = `${message.senderName}|${message.senderEmail}|${message.date}|${message.body.slice(0, 120)}`
     if (seen.has(signature)) {
       continue
     }
     seen.add(signature)
-    messages.push(message)
+    parsed.push(entry)
   }
+  const messages = resolveQuotes(parsed)
 
   if (messages.length === 0) {
     debug("stage=extractMessages produced 0 messages")

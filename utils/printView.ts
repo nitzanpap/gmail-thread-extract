@@ -1,6 +1,7 @@
 import type { Message } from "../types"
 import { cleanBody, cleanText, stripReplyQuotes } from "./clean"
 import { inlineImages } from "./images"
+import { type ParsedMessage, resolveQuotes } from "./quotes"
 
 /**
  * Primary extraction path: fetch Gmail's print view (`?view=pt`) and parse it.
@@ -43,7 +44,7 @@ function printUrl(threadId: string): string {
  * Serialize a parsed (detached) DOM node to text. `innerText` is unavailable on
  * detached nodes, so we walk children and insert newlines at block boundaries.
  */
-function domText(node: Node): string {
+export function domText(node: Node): string {
   let out = ""
   for (const child of Array.from(node.childNodes)) {
     if (child.nodeType === Node.TEXT_NODE) {
@@ -68,7 +69,7 @@ function domText(node: Node): string {
   return out
 }
 
-function parseMessage(block: HTMLTableElement, base: string): Message | null {
+function parseMessage(block: HTMLTableElement, base: string): ParsedMessage | null {
   const rows = Array.from(block.rows)
   if (rows.length === 0) {
     return null
@@ -83,6 +84,7 @@ function parseMessage(block: HTMLTableElement, base: string): Message | null {
   // Body lives in the first nested table.
   const bodyEl = block.querySelector("table")
   let body = ""
+  let withQuotes = ""
   if (bodyEl) {
     // Before any text pass: <img> has no text and would otherwise vanish.
     inlineImages(bodyEl, base)
@@ -92,6 +94,7 @@ function parseMessage(block: HTMLTableElement, base: string): Message | null {
     )) {
       noise.remove()
     }
+    withQuotes = cleanBody(domText(bodyEl), true)
     stripReplyQuotes(bodyEl)
     // Safety net: never reduce a non-empty message to nothing.
     body = cleanBody(domText(bodyEl)) || cleanBody(rawText, true)
@@ -100,7 +103,7 @@ function parseMessage(block: HTMLTableElement, base: string): Message | null {
   if (!body && !senderName) {
     return null
   }
-  return { senderName, senderEmail, date, toText, body }
+  return { message: { senderName, senderEmail, date, toText, body }, withQuotes }
 }
 
 /** Parse a print-view HTML document into subject + messages. */
@@ -111,9 +114,9 @@ export function parsePrintThread(
   const doc = new DOMParser().parseFromString(html, "text/html")
   const subject = doc.title.replace(/^Gmail - /, "").trim()
   const blocks = Array.from(doc.querySelectorAll<HTMLTableElement>("table.message"))
-  const messages = blocks
-    .map(block => parseMessage(block, base))
-    .filter((m): m is Message => m !== null)
+  const messages = resolveQuotes(
+    blocks.map(block => parseMessage(block, base)).filter((m): m is ParsedMessage => m !== null)
+  )
   return { subject, messages }
 }
 

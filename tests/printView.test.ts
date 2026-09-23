@@ -85,13 +85,18 @@ describe("parsePrintThread", () => {
 })
 
 describe("parsePrintThread quotes", () => {
-  const message = (body: string) => `
-<html><head><title>Gmail - t</title></head><body>
+  const block = (body: string) => `
 <table class="message">
   <tr><td><b>Limor</b> &lt;limor@example.com&gt;</td><td>Sep 16, 2026, 6:45 PM</td></tr>
   <tr><td colspan="2"><font class="recipient"><div>to me</div></font></td></tr>
   <tr><td colspan="2"><table><tr><td>${body}</td></tr></table></td></tr>
-</table></body></html>`
+</table>`
+  const thread = (...bodies: string[]) =>
+    `<html><head><title>Gmail - t</title></head><body>${bodies.map(block).join("")}</body></html>`
+  const message = (body: string) => thread(body)
+  const ORIGINAL = "<div>The server moves to the new rack on Friday at noon.</div>"
+  const REPLY =
+    '<div>My reply.<div class="gmail_quote"><div class="gmail_attr">On Mon, Jun 22, 2026 Ada wrote:</div><blockquote class="gmail_quote">The server moves to the new rack on Friday at noon.</blockquote></div></div>'
 
   it("keeps reply history quoted inside a forward — it's not elsewhere in this thread", () => {
     const [msg] = parsePrintThread(
@@ -115,11 +120,35 @@ describe("parsePrintThread quotes", () => {
   })
 
   it("still drops a plain reply quote outside any forward", () => {
+    const [, msg] = parsePrintThread(thread(ORIGINAL, REPLY)).messages
+    expect(msg.body).toBe("My reply.")
+  })
+
+  it("keeps the first message's reply quote — what it quotes predates the thread", () => {
+    // Real case: CC'd on a reply whose quoted original was never sent to you.
     const [msg] = parsePrintThread(
       message(
-        '<div>My reply.<div class="gmail_quote"><div class="gmail_attr">On Mon, Jun 22, 2026 Ada wrote:</div><blockquote class="gmail_quote">old stuff</blockquote></div></div>'
+        '<div dir="rtl">Found the cause.</div><br><div class="gmail_quote"><div class="gmail_attr" dir="rtl">\u202bבתאריך יום ד׳, 23 בספט׳ 2026 ב-17:24 מאת Limor &lt;limor@example.com&gt;:\u202c<br></div><blockquote class="gmail_quote"><div dir="rtl">Hi Eran,<div>Two meters were entered twice.</div></div></blockquote></div>'
       )
     ).messages
-    expect(msg.body).toBe("My reply.")
+    expect(msg.body).toContain("Found the cause.")
+    expect(msg.body).toContain("Hi Eran,")
+    expect(msg.body).toContain("Two meters were entered twice.")
+  })
+
+  it("keeps a later forward whose header isn't in a language we recognize", () => {
+    const [, msg] = parsePrintThread(
+      thread(
+        ORIGINAL,
+        '<div dir="rtl">ראה למטה</div><div class="gmail_quote"><div class="gmail_attr">---------- הודעה שהועברה ---------<br>מאת: Tom &lt;tom@example.com&gt;<br></div><div>Meter numbers: 1392627, 1392631</div></div>'
+      )
+    ).messages
+    expect(msg.body).toContain("1392627")
+  })
+
+  it("keeps the first message's English quote past the text-level 'On … wrote:' cut", () => {
+    const [msg] = parsePrintThread(message(REPLY)).messages
+    expect(msg.body).toContain("My reply.")
+    expect(msg.body).toContain("new rack on Friday")
   })
 })

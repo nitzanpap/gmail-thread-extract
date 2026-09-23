@@ -2,16 +2,30 @@
 import { describe, expect, it } from "vitest"
 import { extractMessages } from "../utils/extract"
 
+const ORIGINAL = "<div>The server moves to the new rack on Friday at noon.</div>"
+const REPLY =
+  '<div>My reply.<div class="gmail_quote"><div class="gmail_attr">On Mon, Jun 22, 2026 Ada wrote:</div><blockquote class="gmail_quote">The server moves to the new rack on Friday at noon.</blockquote></div></div>'
+
 const IMG =
   '<img width="1200" height="800" src="https://mail.google.com/mail/u/0/?ui=2&amp;attid=0.1&amp;view=fimg">'
 
-function renderThread(bodyHtml: string): void {
-  document.body.innerHTML = `
+function renderThread(...bodies: string[]): void {
+  document.body.innerHTML = bodies
+    .map(
+      bodyHtml => `
     <div class="adn ads">
       <span class="gD" email="ada@example.com" name="Ada Lovelace">Ada Lovelace</span>
       <span class="g3" title="Jun 22, 2026, 12:42 PM">12:42 PM</span>
       <div class="a3s aiL">${bodyHtml}</div>
     </div>`
+    )
+    .join("")
+}
+
+/** The reply's body when it follows `original` in the thread. */
+function replyBody(original: string, reply: string): string {
+  renderThread(original, reply)
+  return extractMessages()[1].body
 }
 
 describe("extractMessages (live-DOM fallback)", () => {
@@ -29,6 +43,11 @@ describe("extractMessages (live-DOM fallback)", () => {
     const body = extractMessages()[0].body
     expect(body).toContain("Forwarded message")
     expect(body).toContain("![image](https://mail.google.com/mail/u/0/?ui=2")
+  })
+
+  it("keeps line breaks — innerText on a detached clone has none", () => {
+    renderThread("<div>First line.</div><div>Second line.</div>")
+    expect(extractMessages()[0].body).toBe("First line.\nSecond line.")
   })
 
   it("drops signature-sized icons", () => {
@@ -54,10 +73,14 @@ describe("extractMessages (live-DOM fallback)", () => {
   })
 
   it("still drops a plain reply quote outside any forward", () => {
-    renderThread(
-      '<div>My reply.<div class="gmail_quote"><div class="gmail_attr">On Mon, Jun 22, 2026 Ada wrote:</div><blockquote class="gmail_quote">old stuff</blockquote></div></div>'
-    )
-    expect(extractMessages()[0].body).toBe("My reply.")
+    expect(replyBody(ORIGINAL, REPLY)).toBe("My reply.")
+  })
+
+  it("keeps the first message's reply quote — what it quotes predates the thread", () => {
+    renderThread(REPLY)
+    const body = extractMessages()[0].body
+    expect(body).toContain("My reply.")
+    expect(body).toContain("new rack on Friday")
   })
 
   it("drops Gmail's inline-image hover toolbar", () => {
@@ -76,11 +99,11 @@ describe("extractMessages (live-DOM fallback)", () => {
     // The quoted message (with its forward) is already in the thread. Only an
     // English "On … wrote:" header would be caught by the text-level cut, so
     // the DOM pass must not mistake the quote for forwarded content.
-    renderThread(
+    const body = replyBody(
+      '<div>FYI see below<br><br><div class="gmail_quote"><div class="gmail_attr">---------- Forwarded message ---------<br>From: Limor</div><br><div>Meter 1392627</div></div></div>',
       '<div>Got it, thanks.</div><br><div class="gmail_quote"><div class="gmail_attr">Am Mi., 16. Sept. 2026 um 09:00 Uhr schrieb Tom &lt;tom@example.com&gt;:<br></div>' +
         '<blockquote class="gmail_quote"><div>FYI see below<br><br><div class="gmail_quote"><div class="gmail_attr">---------- Forwarded message ---------<br>From: Limor</div><br><div>Meter 1392627</div></div></div></blockquote></div>'
     )
-    const body = extractMessages()[0].body
     expect(body).toContain("Got it, thanks.")
     expect(body).not.toContain("FYI see below")
     expect(body).not.toContain("1392627")
