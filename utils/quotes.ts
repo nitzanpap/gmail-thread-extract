@@ -35,7 +35,10 @@ const HEADER_FIELD =
  * Only named fields, not any "Word:" — "ע.א.: …" marks an inline answer.
  */
 function isHeaderLine(line: string): boolean {
-  const text = line.replace(BIDI, "").trim()
+  const text = line
+    .replace(BIDI, "")
+    .replace(/<\/?u>|\*/g, "")
+    .trim()
   return /:$/.test(text) || HEADER_FIELD.test(text) || /^-{2,}.*-{2,}$/.test(text)
 }
 
@@ -45,6 +48,7 @@ function isHeaderLine(line: string): boolean {
  */
 function normalize(text: string): string {
   return text
+    .replace(/<\/?u>/g, "")
     .replace(/!\[[^\]]*\]\(\S+\)/g, "")
     .replace(/\[cid:[^\]]*\]/g, "")
     .toLowerCase()

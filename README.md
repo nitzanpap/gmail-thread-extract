@@ -96,8 +96,12 @@ Open a Gmail conversation and click the floating **Extract** button.
    nothing (logged out, or Gmail changed the print view), it expands collapsed messages and scrapes
    the live thread using Gmail's obfuscated classes (`.adn`, `.a3s`, `.gD`, …).
 
+Body formatting survives as Markdown bold (`**text**`) and italic (`*text*`), with underline
+represented as `<u>text</u>` (rendering depends on the Markdown viewer's HTML support). This applies
+to both extraction paths; JSON and text exports carry the same body formatting markers.
+
 Inline body images (pasted screenshots, embedded charts) survive as Markdown image references —
-`![alt](url)` at the image's position — since the body is otherwise serialized to plain text
+`![alt](url)` at the image's position
 ([`utils/images.ts`](utils/images.ts)). Signature logos, social icons and tracking pixels are
 skipped by size. The URL is Gmail's session-scoped attachment link: it opens in the signed-in
 browser, not from an anonymous fetch.

@@ -41,10 +41,10 @@ function printUrl(threadId: string): string {
 }
 
 /**
- * Serialize a parsed (detached) DOM node to text. `innerText` is unavailable on
- * detached nodes, so we walk children and insert newlines at block boundaries.
+ * Serialize detached body markup, keeping emphasis and block boundaries.
+ * `innerText` is unavailable on detached nodes and loses inline formatting.
  */
-export function domText(node: Node): string {
+export function domText(node: Node, active: string[] = []): string {
   let out = ""
   for (const child of Array.from(node.childNodes)) {
     if (child.nodeType === Node.TEXT_NODE) {
@@ -59,7 +59,31 @@ export function domText(node: Node): string {
         if (block) {
           out += "\n"
         }
-        out += domText(el)
+        const style = (el as HTMLElement).style
+        // shortcut: tags and inline styles only; resolve CSS if emails rely on class-based emphasis.
+        const formats: string[] = []
+        if (tag === "b" || tag === "strong" || /^(bold|[6-9]00)$/.test(style?.fontWeight || "")) {
+          formats.push("**")
+        }
+        if (
+          tag === "u" ||
+          /\bunderline\b/.test(`${style?.textDecoration} ${style?.textDecorationLine}`)
+        ) {
+          formats.push("<u>")
+        }
+        if (tag === "i" || tag === "em" || style?.fontStyle === "italic") {
+          formats.push("*")
+        }
+        let text = domText(el, [...active, ...formats])
+        for (const marker of formats.filter(format => !active.includes(format)).reverse()) {
+          const close = marker === "<u>" ? "</u>" : marker
+          // Keep whitespace outside emphasis markers, including across line breaks.
+          text = text.replace(
+            /^(\s*)(\S(?:[^\n]*\S)?)([^\S\n]*)$/gm,
+            (_match, before, content, after) => `${before}${marker}${content}${close}${after}`
+          )
+        }
+        out += text
         if (block) {
           out += "\n"
         }

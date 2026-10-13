@@ -1,6 +1,26 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest"
-import { parsePrintThread } from "../utils/printView"
+import { domText, parsePrintThread } from "../utils/printView"
+
+describe("domText formatting", () => {
+  it.each([
+    ["<b>bold</b> <strong>strong</strong>", "**bold** **strong**"],
+    ["<i>italic</i> <em>emphasis</em>", "*italic* *emphasis*"],
+    ["<b><u>שבשום מקרה ואופן לא תחליף אותם</u></b>", "**<u>שבשום מקרה ואופן לא תחליף אותם</u>**"],
+    [
+      '<span style="font-weight:700;font-style:italic;text-decoration:underline">all</span>',
+      "**<u>*all*</u>**"
+    ],
+    ["<b> bold <b>still bold</b> </b>", " **bold still bold** "],
+    ["<i>first<br>second</i>", "*first*\n*second*"],
+    ["<b> </b><i></i>", " "],
+    ["plain <span>text</span>", "plain text"]
+  ])("preserves formatting in %s", (html, expected) => {
+    const el = document.createElement("div")
+    el.innerHTML = html
+    expect(domText(el)).toBe(expected)
+  })
+})
 
 // Mirrors Gmail's print-view (?view=pt) structure observed live: each message is
 // a <table class="message"> with sender in <b>, email as <…@…> text, a
@@ -60,6 +80,16 @@ describe("parsePrintThread", () => {
   it("preserves body line breaks from <br>", () => {
     expect(messages[0].body).toContain("First body line.")
     expect(messages[0].body).toContain("Second line.")
+  })
+
+  it("preserves bold underline in the print-view body", () => {
+    const html = PRINT_HTML.replace(
+      "First body line.",
+      "<b><u>שבשום מקרה ואופן לא תחליף אותם</u></b>"
+    )
+    expect(parsePrintThread(html).messages[0].body).toContain(
+      "**<u>שבשום מקרה ואופן לא תחליף אותם</u>**"
+    )
   })
 
   it("strips gmail_signature noise from the body", () => {

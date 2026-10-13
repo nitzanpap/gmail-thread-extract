@@ -29,6 +29,25 @@ function replyBody(original: string, reply: string): string {
 }
 
 describe("extractMessages (live-DOM fallback)", () => {
+  it("preserves bold underline and italic in the message body", () => {
+    renderThread("<div><b><u>שבשום מקרה ואופן לא תחליף אותם</u></b> <i>italic</i></div>")
+    expect(extractMessages()[0].body).toBe("**<u>שבשום מקרה ואופן לא תחליף אותם</u>** *italic*")
+  })
+
+  it("keeps formatting when the body survives only through the safety net", () => {
+    renderThread('<div class="im"><b><u>שבשום מקרה ואופן לא תחליף אותם</u></b></div>')
+    expect(extractMessages()[0].body).toBe("**<u>שבשום מקרה ואופן לא תחליף אותם</u>**")
+  })
+
+  it("drops a repeated quote even when its formatting differs from the original", () => {
+    expect(
+      replyBody(
+        "<div><u>The server moves to the new rack on Friday at noon.</u></div>",
+        '<div>My reply.<div class="gmail_quote"><b>On Mon, Jun 22, 2026 Ada wrote:</b><blockquote>The server moves to the new rack on Friday at noon.</blockquote></div></div>'
+      )
+    ).toBe("My reply.")
+  })
+
   it("keeps inline body images as Markdown", () => {
     renderThread(`<div>See the chart:<br>${IMG}<br>Regards</div>`)
     expect(extractMessages()[0].body).toContain("![image](https://mail.google.com/mail/u/0/?ui=2")
