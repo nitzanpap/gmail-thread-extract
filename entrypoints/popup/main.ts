@@ -1,4 +1,4 @@
-import { browser } from "wxt/browser"
+import { type Browser, browser } from "wxt/browser"
 import type { OutputFormat, OutputOptions, Thread } from "../../types"
 import { downloadFile } from "../../utils/download"
 import { safeFilename } from "../../utils/markdown"
@@ -18,6 +18,24 @@ function requestThread(tabId: number): Promise<Thread | null> {
       resolve(browser.runtime.lastError ? null : (response ?? null))
     })
   })
+}
+
+/**
+ * The Gmail tab to extract from: the active tab. On Firefox for Android the
+ * popup may not report the page underneath as active, so there fall back to
+ * the most recently used Gmail tab.
+ */
+async function findGmailTab(): Promise<Browser.tabs.Tab | null> {
+  const [active] = await browser.tabs.query({ active: true, currentWindow: true })
+  if (active?.url && GMAIL_URL.test(active.url)) {
+    return active
+  }
+  const { os } = await browser.runtime.getPlatformInfo()
+  if (os !== "android") {
+    return null
+  }
+  const tabs = await browser.tabs.query({ url: "https://mail.google.com/*" })
+  return tabs.sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0] ?? null
 }
 
 async function init(): Promise<void> {
@@ -98,9 +116,8 @@ async function init(): Promise<void> {
     }
   })
 
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
-  const onGmail = tab?.url ? GMAIL_URL.test(tab.url) : false
-  if (!onGmail || tab?.id == null) {
+  const tab = await findGmailTab()
+  if (tab?.id == null) {
     extractBtn.disabled = true
     hint.textContent = "Open a Gmail conversation to extract."
     return
