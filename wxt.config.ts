@@ -23,6 +23,8 @@ export default defineConfig({
     if (browser === "firefox") {
       // Firefox MV3 requires an add-on id, and AMO now requires a data-collection
       // declaration. The extension collects nothing, so `required: ["none"]`.
+      // gecko_android marks the add-on as Firefox for Android compatible; 142 is
+      // the first Android release that understands data_collection_permissions.
       return {
         ...base,
         browser_specific_settings: {
@@ -31,6 +33,9 @@ export default defineConfig({
             data_collection_permissions: {
               required: ["none"]
             }
+          },
+          gecko_android: {
+            strict_min_version: "142.0"
           }
         }
       }

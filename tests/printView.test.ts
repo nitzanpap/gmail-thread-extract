@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest"
-import { domText, parsePrintThread } from "../utils/printView"
+import { domText, mobileThreadId, parsePrintThread } from "../utils/printView"
 
 describe("domText formatting", () => {
   it.each([
@@ -180,5 +180,25 @@ describe("parsePrintThread quotes", () => {
     const [msg] = parsePrintThread(message(REPLY)).messages
     expect(msg.body).toContain("My reply.")
     expect(msg.body).toContain("new rack on Friday")
+  })
+})
+
+describe("mobileThreadId", () => {
+  it.each([
+    [
+      "https://mail.google.com/mail/mu/mp/21/#cv/priority/%5Esmartlabel_personal/172ba23f03eb1deb",
+      "172ba23f03eb1deb"
+    ],
+    ["https://mail.google.com/mail/mu/mp/966/#cv/Inbox/18C1A2B3D4E5F6A7", "18C1A2B3D4E5F6A7"]
+  ])("reads the open conversation from %s", (url, expected) => {
+    expect(mobileThreadId(url)).toBe(expected)
+  })
+
+  it.each([
+    "https://mail.google.com/mail/mu/mp/21/#tl/priority/%5Esmartlabel_personal",
+    "https://mail.google.com/mail/u/0/#inbox/FMfcgzQbfLdKmPqRsTvWxYz",
+    "https://mail.google.com/mail/u/0/#cv/Inbox/172ba23f03eb1deb"
+  ])("returns null outside a mobile conversation: %s", url => {
+    expect(mobileThreadId(url)).toBeNull()
   })
 })

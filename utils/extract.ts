@@ -8,7 +8,7 @@ import {
   stripReplyQuotes
 } from "./clean"
 import { inlineImages } from "./images"
-import { domText, extractViaPrintView } from "./printView"
+import { domText, extractViaPrintView, mobileThreadId } from "./printView"
 import { type ParsedMessage, resolveQuotes } from "./quotes"
 
 /**
@@ -171,7 +171,10 @@ export function extractMessages(): Message[] {
 
 /** True when a conversation appears to be open (used to decide button injection). */
 export function isThreadOpen(): boolean {
-  return Boolean(document.querySelector("h2.hP")) && findMessageNodes().length > 0
+  return (
+    (Boolean(document.querySelector("h2.hP")) && findMessageNodes().length > 0) ||
+    mobileThreadId(location.href) !== null
+  )
 }
 
 /** Selectors that mark a still-collapsed message or super-collapsed bundle. */
