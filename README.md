@@ -84,6 +84,13 @@ bun run test         # Vitest (Markdown serializer)
 **Firefox** — `about:debugging#/runtime/this-firefox` → *Load Temporary Add-on* → pick any file in
 `.output/firefox-mv2/` (dev) or `.output/firefox-mv3/` (production build).
 
+**Firefox for Android** — the Firefox build is marked Android-compatible (Firefox 142+). To try a
+build on a phone, follow Mozilla's
+[Firefox for Android setup](https://extensionworkshop.com/documentation/develop/developing-extensions-for-firefox-for-android/)
+(`web-ext run -t firefox-android` over USB). On the phone, Gmail serves its mobile web UI; the
+extension reads the open thread's id from that URL and uses the same print-view path. If extraction
+finds nothing there, switch Firefox to *Desktop site* and retry.
+
 Open a Gmail conversation and click the floating **Extract** button.
 
 ## How extraction works

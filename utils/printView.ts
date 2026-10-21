@@ -23,12 +23,27 @@ function accountIndex(): string {
 }
 
 /**
+ * Legacy thread id from Gmail's mobile web URL, which phone browsers (e.g.
+ * Firefox for Android) get instead of the desktop UI. The open conversation is
+ * the hex id at the end of the `#cv/…` fragment, e.g.
+ * `/mail/mu/mp/21/#cv/priority/%5Esmartlabel_personal/172ba23f03eb1deb`.
+ */
+export function mobileThreadId(url: string): string | null {
+  const { pathname, hash } = new URL(url)
+  if (!pathname.includes("/mu/")) {
+    return null
+  }
+  return (hash.match(/^#cv\/.*\/([0-9a-f]{16})$/i) || [])[1] || null
+}
+
+/**
  * Legacy thread id for the print view's `th=` param, read from the live thread
  * DOM. Every rendered message carries it; the open message is always rendered.
+ * The mobile web UI has no such attribute, so fall back to its URL.
  */
 export function getLegacyThreadId(): string | null {
   const el = document.querySelector("[data-legacy-message-id]")
-  return el?.getAttribute("data-legacy-message-id") || null
+  return el?.getAttribute("data-legacy-message-id") || mobileThreadId(location.href)
 }
 
 /** Base the print view's query-only image srcs (`?ui=2&…`) resolve against. */
